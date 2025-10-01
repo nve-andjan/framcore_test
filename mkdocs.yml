@@ -1,0 +1,90 @@
+site_name: FRAM core
+site_author: NVE
+site_description: >-
+  FRAM documentation site
+
+repo_url: https://github.com/NVE/fram-core
+repo_name: NVE/fram-core
+
+theme:
+  name: "material"
+  icon:
+    repo: fontawesome/brands/github
+  features:
+  # - content.code.annotate
+  # - content.code.copy
+  - content.footnote.tooltips
+  - content.tabs.link
+  - content.tooltips
+  - navigation.footer
+  - navigation.indexes
+  - navigation.instant
+  - navigation.instant.prefetch
+  - navigation.instant.progress
+  - navigation.path
+  - navigation.tabs
+  - navigation.tabs.sticky
+  - navigation.top
+  - navigation.tracking
+  - search.highlight
+  - search.share
+  - search.suggest
+  - toc.follow
+
+nav:
+  - index.md
+  - Reference:
+      - reference/index.md
+      - Aggregators: reference/aggregators.md
+
+markdown_extensions:
+- tables
+- attr_list
+
+plugins:
+  - mkdocstrings:
+     handlers:
+        python:
+          options:  
+            show_submodules: true
+            show_root_heading: true
+            show_root_full_path: false
+            show_signature_annotations: true
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            show_source: false
+            pre_render_hooks: []
+            post_render_hooks: []
+            separate_signature: true
+            private_members: false
+            special_members: false
+            undocumented_members: false
+            inherited_members: false
+            inherited_members_exclude: []       
+            filters:
+              - "!Base"
+              - "!^_"
+  - mike
+  - search
+  - macros
+  - table-reader
+
+extra_css:
+  - docs/css/mkdocstrings.css
+
+extra:
+  version:
+    provider: mike
+  juleslinks:
+      jules: https://github.com/NVE/JulES/
+  framlinks:
+    nve: https://www.nve.no/
+    fram: https://nve.github.io/fram/
+    core: https://nve.github.io/fram-core/
+    data: https://nve.github.io/fram-data/
+    demo: https://nve.github.io/fram-demo/
+    julesAPI: https://nve.github.io/fram-jules/
+    dataset: https://dev.azure.com/NVE-devops/Modellrammeverk/_git/pypsa_database_transfer_package
+    pypicore: https://pypi.org/project/fram-data
+    pypidata: https://pypi.org/project/fram-data
+    pypijules: https://pypi.org/project/fram-jules

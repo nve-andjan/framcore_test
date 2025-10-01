@@ -1,1 +1,1 @@
-print('Just a placeholder file')
+print('Just a placeholder file.')
