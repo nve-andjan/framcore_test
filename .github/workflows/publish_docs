@@ -31,12 +31,7 @@ jobs:
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
 
-          # Set version label, e.g. "latest" for main, or branch/tag name
-          if [[ $GITHUB_REF == refs/heads/main ]]; then
-            VERSION=latest
-          else
-            VERSION=${GITHUB_REF#refs/heads/}
-          fi
+          VERSION=0.1
 
           mike deploy --update-aliases $VERSION latest
           mike set-default latest
