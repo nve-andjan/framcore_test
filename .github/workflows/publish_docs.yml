@@ -35,7 +35,7 @@ jobs:
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
 
-          VERSION=0.1
+          VERSION=0.2
 
           echo 'Deploying new documentation version with mike deploy..'
           mike deploy --push --update-aliases $VERSION latest
