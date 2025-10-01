@@ -28,13 +28,15 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo ${{ secrets.GITHUB_TOKEN }}
+          echo 'Configuring git..'
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
 
           VERSION=0.1
 
+          echo 'Deploying new documentation version with mike deploy..'
           mike deploy --update-aliases $VERSION latest
           mike set-default latest
 
+          echo 'Pushing changes to git..'
           git push origin gh-pages
