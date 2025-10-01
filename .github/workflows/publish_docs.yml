@@ -38,8 +38,5 @@ jobs:
           VERSION=0.1
 
           echo 'Deploying new documentation version with mike deploy..'
-          mike deploy --update-aliases $VERSION latest
-          mike set-default latest
-
-          echo 'Pushing changes to git..'
-          git push origin gh-pages
+          mike deploy --push --update-aliases $VERSION latest
+          mike set-default latest --push
