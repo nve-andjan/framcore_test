@@ -20,6 +20,8 @@ jobs:
         with:
           python-version: '3.11'
 
+      - run: echo ${{ secrets.GITHUB_TOKEN }}
+
       - name: Install dependencies
         run: |
           pip install mkdocs mkdocstrings-python mkdocs-material mike mkdocs-macros-plugin mkdocs-table-reader-plugin
