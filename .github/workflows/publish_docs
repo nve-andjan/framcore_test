@@ -1,0 +1,44 @@
+name: Deploy MkDocs documentation
+
+on:
+  push:
+    branches:
+      - main       # or your default branch
+      - 'v*'       # for version branches like v1.0, v2.0 etc.
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # needed for mike to work with git history
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install mkdocs mkdocs-material mike
+
+      - name: Deploy docs with mike
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+
+          # Set version label, e.g. "latest" for main, or branch/tag name
+          if [[ $GITHUB_REF == refs/heads/main ]]; then
+            VERSION=latest
+          else
+            VERSION=${GITHUB_REF#refs/heads/}
+          fi
+
+          mike deploy --update-aliases $VERSION latest
+          mike set-default latest
+
+          git push origin gh-pages
