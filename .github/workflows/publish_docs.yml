@@ -22,8 +22,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install mkdocs mkdocs-material mike
-
+          pip install mkdocs mkdocstrings-python mkdocs-material mike mkdocs-macros-plugin mkdocs-table-reader-plugin
+          
       - name: Deploy docs with mike
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
