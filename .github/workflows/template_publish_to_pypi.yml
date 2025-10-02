@@ -1,4 +1,4 @@
-name: Template to Publish Package to TestPyPI
+name: Template to prepare publishing packages to PyPI
 
 on:
   workflow_call:
@@ -66,28 +66,3 @@ jobs:
       with:
         name: ${{ inputs.package_name }}-package-distributions
         path: dist/
-
-  publish-to-testpypi:
-    name: Publish ${{ inputs.package_name }} to TestPyPI
-    needs:
-    - build
-    runs-on: ubuntu-latest
-
-    environment:
-      name: testpypi
-      url: https://test.pypi.org/p/${{ inputs.package_name }}
-
-    permissions:
-      id-token: write
-
-    steps:
-    - name: Download all the dists
-      uses: actions/download-artifact@v4
-      with:
-        name: ${{ inputs.package_name }}-package-distributions
-        path: dist/
-    
-    - name: Verify downloaded packages
-      run: |
-        echo "Downloaded packages for ${{ inputs.package_name }}:"
-        ls -la dist/
