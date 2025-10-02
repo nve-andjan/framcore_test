@@ -64,5 +64,5 @@ jobs:
     - name: Store the distribution packages
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ inputs.package_name }}-package-distributions
+        name: ${{ inputs.package_name }}-dist
         path: dist/
