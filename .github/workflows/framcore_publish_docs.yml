@@ -13,7 +13,7 @@ on:
 
 jobs:
   deploy-docs:
-    uses: ./.github/workflows/deploy-docs-template.yml
+    uses: ./.github/workflows/template_publish_docs.yml
     with:
       package_name: 'framcore'
       source_paths: '["docs/**", "framcore/**", "mkdocs.yml", "pyproject.toml"]'
