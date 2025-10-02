@@ -1,0 +1,19 @@
+name: Deploy framcore Documentation
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/**'
+      - 'framcore/**'
+      - 'mkdocs.yml'
+      - 'pyproject.toml'
+  workflow_dispatch:
+
+jobs:
+  deploy-docs:
+    uses: ./.github/workflows/deploy-docs-template.yml
+    with:
+      package_name: 'framcore'
+      source_paths: '["docs/**", "framcore/**", "mkdocs.yml", "pyproject.toml"]'
