@@ -1,0 +1,50 @@
+name: Publish framcore to PyPI
+
+on: 
+  push:
+    branches:
+      - main
+    paths:
+      - 'framcore/**'
+      - 'pyproject.toml'
+      - 'README.md'
+  workflow_dispatch:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    uses: ./.github/workflows/template_publish_to_pypi.yml
+    with:
+      package_name: 'framcore'
+    
+  # This step can not be defined in the template as pypa/gh-action-pypi-publish does not support it being run in a reusable workflow
+  publish-to-pypi:
+    name: Publish ${{ inputs.package_name }} to PyPI
+    needs:
+      - build
+    runs-on: ubuntu-latest
+
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/${{ inputs.package_name }}
+
+    permissions:
+      id-token: write
+
+    steps:
+    - name: Download all the dists
+      uses: actions/download-artifact@v4
+      with:
+        name: ${{ inputs.package_name }}-package-distributions
+        path: dist/
+    
+    - name: Verify downloaded packages
+      run: |
+        echo "Downloaded packages for ${{ inputs.package_name }}:"
+        ls -la dist/
+    
+    - name: Publish distribution 📦 to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        repository-url: https://test.pypi.org/legacy/
