@@ -14,6 +14,8 @@ on:
 jobs:
   deploy-docs:
     uses: ./.github/workflows/template_publish_docs.yml
+    permissions:
+      contents: write
     with:
       package_name: 'framcore'
       source_paths: '["docs/**", "framcore/**", "mkdocs.yml", "pyproject.toml"]'
