@@ -1,0 +1,84 @@
+name: Publish framcore to TestPyPI
+
+on: 
+  push:
+    branches:
+      - main
+      
+jobs:
+  build:
+    name: Build distribution 📦
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'  # Updated to match your project requirement
+    
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: latest
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+    
+    - name: Verify project structure
+      run: |
+        echo "Project structure:"
+        ls -la
+        echo "Poetry configuration:"
+        poetry config --list
+        echo "Project info:"
+        poetry show --tree || echo "No dependencies installed yet"
+    
+    - name: Install dependencies
+      run: |
+        poetry install --no-dev
+    
+    - name: Build distribution with Poetry
+      run: |
+        echo "Building distribution packages..."
+        poetry build
+        echo "Built packages:"
+        ls -la dist/
+    
+    - name: Store the distribution packages
+      uses: actions/upload-artifact@v4
+      with:
+        name: python-package-distributions
+        path: dist/
+
+  publish-to-testpypi:
+    name: Publish framcore to TestPyPI
+    needs:
+    - build
+    runs-on: ubuntu-latest
+
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/framcore
+
+    permissions:
+      id-token: write  # IMPORTANT: mandatory for trusted publishing
+
+    steps:
+    - name: Download all the dists
+      uses: actions/download-artifact@v4
+      with:
+        name: python-package-distributions
+        path: dist/
+    
+    - name: Verify downloaded packages
+      run: |
+        echo "Downloaded packages:"
+        ls -la dist/
+    
+    - name: Publish distribution 📦 to TestPyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        repository-url: https://test.pypi.org/legacy/
