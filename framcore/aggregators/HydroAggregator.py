@@ -129,28 +129,28 @@ class HydroAggregator(Aggregator):
 
         t = time()
         upstream_topology = self._map_upstream_topology(data)
-        self.send_debug_event(f"_map_upstream_topology time [s]: {round(time() - t, 3)}")
+        self.send_debug_event(f"_map_upstream_topology time: {round(time() - t, 3)} seconds")
 
         t = time()
         generator_module_groups, reservoir_module_groups = self._group_modules_by_power_node(model, upstream_topology)
-        self.send_debug_event(f"_group_modules_by_power_node time [s]: {round(time() - t, 3)}")
+        self.send_debug_event(f"_group_modules_by_power_node time: {round(time() - t, 3)} seconds")
 
         t = time()
         self._group_modules_by_regulation_factor(model, generator_module_groups, reservoir_module_groups, upstream_topology)
-        self.send_debug_event(f"_group_modules_by_regulation_factor time [s]: {round(time() - t, 3)}")
+        self.send_debug_event(f"_group_modules_by_regulation_factor time: {round(time() - t, 3)} seconds")
 
         t = time()
         ignore_production_capacity_modules = self._ignore_production_capacity_modules(model)
-        self.send_debug_event(f"_ignore_production_capacity_modules time [s]: {round(time() - t, 3)}")
+        self.send_debug_event(f"_ignore_production_capacity_modules time: {round(time() - t, 3)} seconds")
 
         t = time()
         self._aggregate_groups(model, upstream_topology, ignore_production_capacity_modules)
-        self.send_debug_event(f"_aggregate_groups time [s]: {round(time() - t, 3)}")
+        self.send_debug_event(f"_aggregate_groups time: {round(time() - t, 3)} seconds")
 
         # Add reservoir modules to aggregation map
         t = time()
         self._aggregation_map = {dd: set([a]) for a, d in self._grouped_reservoirs.items() for dd in d}
-        self.send_debug_event(f"add reservoir modules to _aggregation_map time [s]: {round(time() - t, 3)}")
+        self.send_debug_event(f"add reservoir modules to _aggregation_map time: {round(time() - t, 3)} seconds")
 
         # Add generator modules to aggregation map
         t = time()
@@ -160,7 +160,7 @@ class HydroAggregator(Aggregator):
                     self._aggregation_map[dd] = set([a])
                 elif not data[dd].get_reservoir():  # if reservoir module already in map, skip as reservoir mapping is main mapping
                     self._aggregation_map[dd].add(a)
-        self.send_debug_event(f"add generator modules to _aggregation_map time [s]: {round(time() - t, 3)}")
+        self.send_debug_event(f"add generator modules to _aggregation_map time: {round(time() - t, 3)} seconds")
 
         # Delete detailed modules and add remaining modules to aggregation map
         t = time()
@@ -170,9 +170,9 @@ class HydroAggregator(Aggregator):
                 if not (m_key in self._aggregation_map or m_key in self._grouped_reservoirs):
                     self._aggregation_map[m_key] = set()
                 del model.get_data()[m_key]
-        self.send_debug_event(f"delete detailed modules time [s]: {round(time() - t, 3)}")
+        self.send_debug_event(f"delete detailed modules time: {round(time() - t, 3)} seconds")
 
-        self.send_debug_event(f"total _aggregate [s]: {round(time() - t0, 3)}")
+        self.send_debug_event(f"total _aggregate: {round(time() - t0, 3)} seconds")
 
     def _map_upstream_topology(
         self,

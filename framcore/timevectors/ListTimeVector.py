@@ -46,6 +46,9 @@ class ListTimeVector(TimeVector):
                 "A TimeVector is either a level or a profile."
             )
             raise ValueError(message)
+        # assert vector.shape == (timeindex.get_num_periods(),), (
+        #     f"Vector shape {vector.shape} does not match timeindex num_periods {timeindex.get_num_periods()}"
+        # )
         self._timeindex = timeindex
         self._vector = vector
         self._unit = unit
@@ -57,12 +60,19 @@ class ListTimeVector(TimeVector):
         """Check equality between two ListTimeVector objects."""
         if not isinstance(other, ListTimeVector):
             return NotImplemented
-        return (self._timeindex == other._timeindex) and np.array_equal(self._vector, other._vector) and (self._unit == other._unit) and (self._is_max_level == other._is_max_level) and (self._is_zero_one_profile == other._is_zero_one_profile) and (self._reference_period == other._reference_period)
-    
+        return (
+            (self._timeindex == other._timeindex)
+            and np.array_equal(self._vector, other._vector)
+            and (self._unit == other._unit)
+            and (self._is_max_level == other._is_max_level)
+            and (self._is_zero_one_profile == other._is_zero_one_profile)
+            and (self._reference_period == other._reference_period)
+        )
+
     def __hash__(self) -> int:
         """Return hash of ListTimeVector object."""
         return hash((self._timeindex, self._vector.tobytes(), self._unit, self._is_max_level, self._is_zero_one_profile, self._reference_period))
-    
+
     def __repr__(self) -> str:  # TODO: Also timeindex and reference_period
         """Return the string representation of the ListTimeVector."""
         return f"ListTimeVector(timeindex={self._timeindex}, vector={self._vector}, unit={self._unit})"

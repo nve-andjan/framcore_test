@@ -7,13 +7,13 @@ from typing import TYPE_CHECKING
 from framcore.aggregators import Aggregator
 from framcore.aggregators._utils import _aggregate_costs
 from framcore.attributes import MaxFlowVolume, Price
-from framcore.components import Component, Demand, Node, Transmission
+from framcore.components import Component, Demand, Node, Transmission, Flow
 from framcore.curves import Curve
 from framcore.expressions import Expr
 from framcore.metadata import Member, Meta
 from framcore.timeindexes import FixedFrequencyTimeIndex, SinglePeriodTimeIndex
 from framcore.timevectors import TimeVector
-from framcore.utils import get_component_to_nodes, get_transports_by_commodity
+from framcore.utils import get_component_to_nodes, get_transports_by_commodity, get_supported_components, get_flow_infos, get_node_to_commodity
 
 # TODO: Support internal loss demand
 # TODO: Document method appropriate place (which docstring? module? class? __init__? _aggregate?)
@@ -55,11 +55,11 @@ class NodeAggregator(Aggregator):
         self._utilization_rate = utilization_rate
 
         # To remember all modifications in _aggregate so we can undo them in _disaggregate
-        # Will be cleared in __init of _aggregate, so that same memory can be re-used.
+        # Will be cleared in _init_aggregate, so that same memory can be re-used.
         self._grouped_nodes: dict[str, set[str]] = defaultdict(set)
         self._replaced_references: dict[str, set[tuple[str, str]]] = defaultdict(set)  # dict with controll of all nodes which have been replaced
         self._internal_transports: set[str] = set()
-        self._internal_demands: set[str] = set()
+        self._internal_transport_demands: set[str] = set()
 
         # To record error messages in _aggregate and _disaggregate
         # Will be cleared in _init_aggregate and _init_disaggregate,
@@ -91,7 +91,10 @@ class NodeAggregator(Aggregator):
             group_node = Node(commodity=self._commodity)
             self._set_group_price(model, group_node, member_node_names, "EUR/MWh")
             self._delete_members(data, member_node_names)
-            model.add(group_name, group_node)
+
+            assert group_name not in data, f"{group_name}"
+            data[group_name] = group_node
+
             self._replace_node(group_name, member_node_names, components, component_to_nodes)
             components[group_name] = group_node
         self.send_debug_event(f"main logic time {round(time() - t, 3)} seconds")
@@ -99,8 +102,8 @@ class NodeAggregator(Aggregator):
         t = time()
         transports = get_transports_by_commodity(components, self._commodity)
         self._update_internal_transports(transports)
-        self._delete_transports(data)
-        self._add_internal_demands(model, components, transports)
+        self._delete_internal_transports(data)
+        self._add_internal_transport_demands(model, components, transports)
         self.send_debug_event(f"handle internal transport losses time {round(time() - t, 3)} seconds")
 
         self.send_debug_event(f"total time {round(time() - t0, 3)} seconds")
@@ -117,13 +120,46 @@ class NodeAggregator(Aggregator):
                 # earlier to_node was added here, but it should be the transport name, right?
                 self._internal_transports.add(name)
 
-    def _add_internal_demands(
+    def _get_demand_member_meta_keys(self, components: dict[str, Component]) -> set[str]:
+        """We find all direct_out demands via flows from get_supported_components and collect member meta keys from them."""
+        out: set[str] = set()
+        nodes_and_flows = get_supported_components(components, supported_types=(Node, Flow), forbidden_types=tuple())
+        node_to_commodity = get_node_to_commodity(nodes_and_flows)
+        for flow in nodes_and_flows.values():            
+            if not isinstance(flow, Flow):
+                continue
+            flow_infos = get_flow_infos(flow, node_to_commodity)
+            if not len(flow_infos) == 1:
+                continue
+            flow_info = flow_infos[0]
+            if flow_info.category != "direct_out":
+                continue
+            if flow_info.commodity_out != self._commodity: 
+                continue
+            demand = flow
+            for key in demand.get_meta_keys():
+                meta = demand.get_meta(key)
+                if isinstance(meta, Member):
+                    out.add(key)
+        return out
+                
+
+    def _add_internal_transport_demands(
         self,
         model: Model,
         components: dict[str, Component],
         transports: dict[str, tuple[str, str]],
     ) -> None:
-        # TODO: Document that we rely on Transmission and Demand API to get loss
+        """
+        Add demand representing loss on internal transmission lines being removed by aggregation.
+
+        This is done to avoid underestimation of aggregated demand.
+        """
+        data = model.get_data()
+
+        demand_member_meta_keys = self._get_demand_member_meta_keys(components)
+
+        # TODO: Document that we rely on Transmission and Demand APIs to get loss
         for key in self._internal_transports:
             transport = components[key]
             from_node, to_node = transports[key]
@@ -139,25 +175,33 @@ class NodeAggregator(Aggregator):
                     continue
                 if transport.get_outgoing_volume().get_level():
                     level = transport.get_outgoing_volume().get_level() * loss.get_level()
-                    profile = (
-                        transport.get_outgoing_volume().get_profile()
-                    )  # could multiply by loss profile here, but profile*profile is not yet supported so we wait.
+
+                    # could multiply by loss profile here, but profile * profile is not yet supported so we wait.
+                    profile = transport.get_outgoing_volume().get_profile()
+
                 # elif exploitation factor at individual level. How to best access this?
                 else:
                     level = transport.get_max_capacity().get_level() * self._utilization_rate * loss.get_level()
                     profile = loss.get_profile()
-                internl_demand = Demand(
+
+                internal_losses_demand = Demand(
                     node=node,
                     capacity=MaxFlowVolume(
                         level=level,
                         profile=profile,
                     ),
                 )
-                demand_key = key + "_Internal_Demand_" + node
-                self._internal_demands.add(demand_key)
-                model.add(demand_key, internl_demand)
 
-    def _delete_transports(
+                for meta_key in demand_member_meta_keys:
+                    internal_losses_demand.add_meta(meta_key, Member("InternalTransportLossFromNodeAggregator"))
+
+                demand_key = key + "_InternalTransportLossDemand_" + node
+
+                self._internal_transport_demands.add(demand_key)
+                assert demand_key not in data, f"{demand_key}"
+                data[demand_key] = internal_losses_demand
+
+    def _delete_internal_transports(
         self,
         data: dict[str, Component | TimeVector | Curve | Expr],
     ) -> None:
@@ -213,14 +257,14 @@ class NodeAggregator(Aggregator):
                     component.replace_node(key, group_name)
                     self._replaced_references[name].add((key, group_name))
 
-    def _init_aggregate( # noqa C901
+    def _init_aggregate(  # noqa C901
         self,
         components: dict[str, Component],
         data: dict[str, Component | TimeVector | Curve | Expr],
     ) -> None:
         self._grouped_nodes.clear()
         self._internal_transports.clear()
-        self._internal_demands.clear()
+        self._internal_transport_demands.clear()
         self._errors.clear()
 
         self._aggregation_map = defaultdict(set)
@@ -330,10 +374,10 @@ class NodeAggregator(Aggregator):
         self._restore_nodes(new_data, original_data, deleted_group_names)
         self._restore_references(new_data)
 
-        restorable_transports = self._validate_restore_transports(new_data, original_data, deleted_group_names)
-        self._restore_transports(new_data, original_data, restorable_transports)
+        restorable_transports = self._validate_restore_internal_transports(new_data, original_data, deleted_group_names)
+        self._restore_internal_transports(new_data, original_data, restorable_transports)
 
-        self._delete_internal_demands(new_data)
+        self._delete_internal_transport_demands(new_data)
 
     def _init_disaggregate(
         self,
@@ -392,7 +436,7 @@ class NodeAggregator(Aggregator):
                     original_price.copy_from(group_price)
                 new_data[key] = original_node
 
-    def _validate_restore_transports(
+    def _validate_restore_internal_transports(
         self,
         new_data: dict[str, Component | TimeVector | Curve | Expr],
         original_data: dict[str, Component | TimeVector | Curve | Expr],
@@ -426,7 +470,7 @@ class NodeAggregator(Aggregator):
 
         return restorable_transports
 
-    def _restore_transports(
+    def _restore_internal_transports(
         self,
         new_data: dict[str, Component | TimeVector | Curve | Expr],
         original_data: dict[str, Component | TimeVector | Curve | Expr],
@@ -438,8 +482,8 @@ class NodeAggregator(Aggregator):
             transport = original_data[key]
             new_data[key] = transport
 
-    def _delete_internal_demands(self, new_data: dict[str, Component | TimeVector | Curve | Expr]) -> None:
-        for key in self._internal_demands:
+    def _delete_internal_transport_demands(self, new_data: dict[str, Component | TimeVector | Curve | Expr]) -> None:
+        for key in self._internal_transport_demands:
             new_data.pop(key, None)
 
     def _restore_references(self, new_data: dict[str, Component | TimeVector | Curve | Expr]) -> None:

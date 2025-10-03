@@ -9,6 +9,7 @@ from numpy.typing import NDArray
 
 from framcore.attributes import FlowVolume
 from framcore.components import Component, Flow, Node
+from framcore.events import send_warning_event
 from framcore.expressions import get_unit_conversion_factor
 from framcore.expressions._utils import _load_model_and_create_model_db
 from framcore.metadata import Member
@@ -298,8 +299,8 @@ def get_regional_volumes(
                 out_dict[node_category] = dict()
             for flow_category, flows in flow_categories.items():
                 x = np.zeros(num_periods, dtype=dtype)
-                for flow in flows:
-                    with contextlib.suppress(Exception):
+                for flow in set(flows):
+                    try:
                         vector = _get_vector(
                             flow=flow,
                             is_ingoing=is_ingoing,
@@ -312,6 +313,8 @@ def get_regional_volumes(
                             is_float32=is_float32,
                         )
                         np.add(x, vector, out=x)
+                    except Exception as e:
+                        send_warning_event(flow, f"Could not get direct production or consumption for flow {flow}: {e}")
                 out_dict[node_category][flow_category] = x
 
     # converted
@@ -321,8 +324,8 @@ def get_regional_volumes(
                 out_dict[node_category] = dict()
             for flow_category, flows in flow_categories.items():
                 x = out_dict[node_category][flow_category] if flow_category in out_dict[node_category] else np.zeros(num_periods, dtype=dtype)
-                for flow in flows:
-                    with contextlib.suppress(Exception):
+                for flow in set(flows):
+                    try:
                         vector = _get_vector(
                             flow=flow,
                             is_ingoing=is_ingoing,
@@ -335,6 +338,8 @@ def get_regional_volumes(
                             is_float32=is_float32,
                         )
                         np.add(x, vector, out=x)
+                    except Exception as e:
+                        send_warning_event(flow, f"Could not get indirect production or consumption for flow {flow}: {e}")
                 out_dict[node_category][flow_category] = x
 
     # trade
@@ -343,8 +348,8 @@ def get_regional_volumes(
             out_dict[category] = dict()
             for trade_partner, flows in trade_partners.items():
                 x = np.zeros(num_periods, dtype=dtype)
-                for flow in flows:
-                    with contextlib.suppress(Exception):
+                for flow in set(flows):
+                    try:
                         vector = _get_vector(
                             flow=flow,
                             is_ingoing=is_ingoing,
@@ -357,6 +362,8 @@ def get_regional_volumes(
                             is_float32=is_float32,
                         )
                         np.add(x, vector, out=x)
+                    except Exception as e:
+                        send_warning_event(flow, f"Could not get trade for flow {flow}: {e}")
                 out_dict[category][trade_partner] = x
 
     return out

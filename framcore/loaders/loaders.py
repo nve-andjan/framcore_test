@@ -39,11 +39,12 @@ class Loader(Base, ABC):
             dict: The object's state dictionary.
 
         """
-        self._clear_cache()
+        self.clear_cache()
         return self.__dict__
 
     @abstractmethod
-    def _clear_cache(self) -> None:
+    def clear_cache(self) -> None:
+        """Clear cached data from the loader."""
         pass
 
     # TODO: Is this correct? Also figure out how sharing Loaders should be when copying model given filepaths and copied

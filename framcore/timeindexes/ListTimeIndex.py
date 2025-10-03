@@ -135,7 +135,7 @@ class ListTimeIndex(TimeIndex):
 
     def get_period_average(self, vector: NDArray, start_time: datetime, duration: timedelta, is_52_week_years: bool) -> float:
         """Get the average over the period from the vector."""
-        assert vector.shape == (self.get_num_periods() + 1,)
+        # assert vector.shape == (self.get_num_periods(),), f"Vector shape {vector.shape} does not match timeindex {self}"
         target_timeindex = FixedFrequencyTimeIndex(
             start_time=start_time,
             period_duration=duration,

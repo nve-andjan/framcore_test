@@ -99,7 +99,8 @@ class Model(Base):
         components = dict()
         for key, value in data.items():
             if isinstance(value, Expr):
-                out.update(value.get_loaders())
+                value.add_loaders(out)
+                # out.update(value.get_loaders())
             elif isinstance(value, TimeVector | Curve):
                 loader = value.get_loader()
                 if loader is not None:
@@ -109,4 +110,16 @@ class Model(Base):
         graph = get_supported_components(components, (Flow, Node), tuple())
         for c in graph.values():
             c: Flow | Node
-            out.update(c.get_loaders())
+            c.add_loaders(out)
+            # out.update(c.get_loaders())
+        return out
+
+    def clear_caches(self) -> None:
+        """
+        Clear cached data from objects which use it in Model.
+
+        Currently only loaders use cache.
+
+        """
+        for loader in self.get_loaders():
+            loader.clear_cache()
